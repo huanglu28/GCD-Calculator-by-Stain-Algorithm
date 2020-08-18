@@ -1,0 +1,107 @@
+module stein(
+			input wire [11:0] A,  
+			input wire [11:0] B,
+			input wire clk,    
+			input wire clr, 
+			input wire go,
+			output wire [11:0] gcd_out
+			);
+
+reg [11:0] A_temp,B_temp,C,gcd_temp;
+reg [4:0] next_state,current_state;
+//wire [11:0] done;
+parameter isdone=4b'0000, //可以输出结果
+			 //state1=4b'0001, //A B 均为偶数
+			 //state2=4b'0010, //A B 均为奇数
+			 //state3=4b'0011, //A为偶数，B为奇数
+			 //state4=4b'0100; //A为奇数，B为偶数
+			 done=4b'0101;   //输出
+			 start=4b'0110;  //等待输入
+			 inputl=4b'0111; //输入
+			 judge=4b'1000;  //判断
+always @(posedge clk)
+begin
+	if(clr==1)
+		begin
+			current_state=start;
+		end
+	else
+	begin
+		current_state=next_state;
+	end
+end
+
+always @(current_state) begin
+	case(current_state)
+		start:
+			if (go==0) begin
+				next_state=start;
+			end
+			else begin
+				next_state=inputl;
+			end
+		inputl:
+			begin
+				A_temp=A;
+				B_temp=B;
+				C=1'b1;
+				gcd_temp=0;
+				next_state=isdone;
+			end
+		isdone:
+			if (A_temp==B_temp) 
+			begin
+				gcd_temp=A_temp*C;
+				next_state=done;
+			end
+			else if(A_temp==0)&&(B_temp!=0)
+			begin
+				gcd_temp=B_temp;
+				next_state=done;
+			end 
+			else if(A_temp!=0)&&(B_temp==0)
+			begin
+				gcd_temp=A_temp;
+				next_state=done;
+			end
+			else begin
+				next_state=judge;
+			end
+		judge:
+		begin
+			next_state=isdone;
+			if(A_temp[0]==0&&B_temp[0]==0) //A B 均为偶数
+			begin
+				 A_temp=(A_temp>>1);
+				 B_temp=(B_temp>>1);
+				 C=(C<<1);
+			end
+			else if(A_temp[0]==1'b1&&B_temp[0]==1'b0) //A为奇数，B为偶数
+			begin
+				A_temp=A_temp;
+				B_temp=(B_temp>>1);
+				C=C;
+			end 
+			else if(A_temp[0]==1'b0&&B_temp[0]==1'b1) //A为偶数，B为奇数
+			begin
+				A_temp=(A_temp>>1);
+				B_temp=B_temp;
+				C=C;			 
+			end 
+			else  //A B 均为奇数
+			begin
+				if(A_temp>B_temp) begin 
+					A_temp=((A_temp-B_temp)>>1);
+					B_temp=B_temp;
+					C=C;
+				end
+				else if(A_temp<B_temp) begin
+					A_temp=((B_temp-A_temp)>>1);
+					B_temp=A_temp;
+					C=C;
+				end
+			end 
+		end
+endcase	
+assign gcd_out=gcd_temp;
+endmodule 
